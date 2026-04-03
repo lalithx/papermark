@@ -63,3 +63,5 @@ lib/emails/marketing
 # changelog and docs
 changelog
 .docs
+
+papermark-data/*
