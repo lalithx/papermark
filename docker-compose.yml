@@ -6,8 +6,8 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-        - NEXT_PUBLIC_APP_DOMAIN=docs.flexgrid.cloud
-        - NEXT_PUBLIC_APP_BASE_HOST=docs.flexgrid.cloud
+        - NEXT_PUBLIC_APP_DOMAIN=localhost:3000
+        - NEXT_PUBLIC_APP_BASE_HOST=localhost:3000
     restart: always
     ports:
       - "3000:3000"
