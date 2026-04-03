@@ -20,11 +20,13 @@ WORKDIR /app
 ARG NEXT_PUBLIC_APP_DOMAIN=docs.flexgrid.cloud
 ARG NEXT_PUBLIC_WEBHOOK_BASE_HOST=docs.flexgrid.cloud
 ARG NEXT_PUBLIC_BASE_URL=https://docs.flexgrid.cloud
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
 # 3. Export them as Environment Variables for the Build Process
 ENV NEXT_PUBLIC_APP_DOMAIN=$NEXT_PUBLIC_APP_DOMAIN
 ENV NEXT_PUBLIC_WEBHOOK_BASE_HOST=$NEXT_PUBLIC_WEBHOOK_BASE_HOST
 ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_PUBLIC_APP_BASE_HOST=$NEXT_PUBLIC_APP_DOMAIN
 ENV APP_DOMAIN=$NEXT_PUBLIC_APP_DOMAIN
 
@@ -77,8 +79,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 
 # 7. Start the application
-CMD ["npm", "start"]
+# We run 'db push' first to ensure the tables exist in Postgres
+CMD npx prisma db push && npm start

@@ -9,34 +9,37 @@ function createHankoClient() {
 
   // Real initialization
   if (apiKey && tenantId && apiKey !== "placeholder") {
-    return tenant({
-      apiKey,
-      tenantId,
-    });
+    // Basic validation to avoid passing empty strings
+    if (apiKey.trim() && tenantId.trim()) {
+      return tenant({
+        apiKey,
+        tenantId,
+      });
+    }
   }
 
-  // Fallback: Return a fake object with placeholder values to prevent 
-  // library initialization from crashing (e.g. PasskeyProvider in next-auth).
-  const mockTenant = {
-    apiKey: "placeholder",
-    tenantId: "placeholder",
-    // Adding common properties that libraries might look for
-    issuer: "https://passkeys.hanko.io/placeholder",
+  // Fallback: Return a plain object with placeholder values.
+  // Using both 'tenantId' and 'id' as some versions of the library 
+  // might expect one or the other to build the issuer URL.
+  const thrower = () => {
+    throw new Error(
+      "Hanko Passkeys are not configured. Please set HANKO_API_KEY and NEXT_PUBLIC_HANKO_TENANT_ID.",
+    );
   };
 
-  return new Proxy(mockTenant as any, {
-    get(target, prop) {
-      if (prop in target) {
-        return (target as any)[prop];
-      }
-      // For anything else (methods), return a function that throws a clear runtime error
-      return () => {
-        throw new Error(
-          "Hanko Passkeys are not configured. Please set HANKO_API_KEY and NEXT_PUBLIC_HANKO_TENANT_ID.",
-        );
-      };
+  const mockTenant: any = {
+    apiKey: "placeholder",
+    tenantId: "placeholder",
+    id: "placeholder",
+    issuer: "https://passkeys.hanko.io/placeholder",
+    baseUrl: "https://passkeys.hanko.io/placeholder",
+    registration: {
+      initialize: thrower,
+      finalize: thrower,
     },
-  });
+  };
+
+  return mockTenant;
 }
 
 const hanko = createHankoClient();

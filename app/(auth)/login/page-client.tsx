@@ -32,6 +32,11 @@ export default function Login() {
   const isSSORequired = authError === "require-saml-sso";
 
   const [lastUsed, setLastUsed] = useLastUsed();
+  const hasGoogle = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const hasLinkedIn = !!process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID;
+  const hasPasskey = !!process.env.NEXT_PUBLIC_HANKO_TENANT_ID;
+  const hasSaml = !!process.env.NEXT_PUBLIC_SAML_ENABLED || !!process.env.NEXTAUTH_URL;
+
   const authMethods = ["google", "email", "linkedin", "passkey"] as const;
   type AuthMethod = (typeof authMethods)[number];
   const [clickedMethod, setClickedMethod] = useState<AuthMethod | undefined>(
@@ -188,52 +193,58 @@ export default function Login() {
                 )}
               </Button>
             </div>
-            <div className="relative">
-              <Button
-                onClick={() => {
-                  setClickedMethod("linkedin");
-                  setLastUsed("linkedin");
-                  signIn("linkedin", {
-                    ...(next && next.length > 0 ? { callbackUrl: next } : {}),
-                  }).then((res) => {
-                    setClickedMethod(undefined);
-                  });
-                }}
-                loading={clickedMethod === "linkedin"}
-                disabled={clickedMethod && clickedMethod !== "linkedin"}
-                className="flex w-full items-center justify-center space-x-2 border border-gray-300 bg-gray-100 font-normal text-gray-900 hover:bg-gray-200"
-              >
-                <LinkedIn />
-                <span>Continue with LinkedIn</span>
-                {clickedMethod !== "linkedin" && lastUsed === "linkedin" && (
-                  <LastUsed />
-                )}
-              </Button>
-            </div>
-            <div className="relative">
-              <Button
-                onClick={() => {
-                  setLastUsed("passkey");
-                  setClickedMethod("passkey");
-                  signInWithPasskey({
-                    tenantId: process.env.NEXT_PUBLIC_HANKO_TENANT_ID as string,
-                  }).then(() => {
-                    setClickedMethod(undefined);
-                  });
-                }}
-                variant="outline"
-                loading={clickedMethod === "passkey"}
-                disabled={clickedMethod && clickedMethod !== "passkey"}
-                className="flex w-full items-center justify-center space-x-2 border border-gray-300 bg-gray-100 font-normal text-gray-900 hover:bg-gray-200 hover:text-gray-900"
-              >
-                <Passkey className="h-4 w-4" />
-                <span>Continue with a passkey</span>
-                {lastUsed === "passkey" && <LastUsed />}
-              </Button>
-            </div>
-            <div className="relative">
-              <SSOLogin autoExpand={isSSORequired} />
-            </div>
+            {hasLinkedIn && (
+              <div className="relative">
+                <Button
+                  onClick={() => {
+                    setClickedMethod("linkedin");
+                    setLastUsed("linkedin");
+                    signIn("linkedin", {
+                      ...(next && next.length > 0 ? { callbackUrl: next } : {}),
+                    }).then((res) => {
+                      setClickedMethod(undefined);
+                    });
+                  }}
+                  loading={clickedMethod === "linkedin"}
+                  disabled={clickedMethod && clickedMethod !== "linkedin"}
+                  className="flex w-full items-center justify-center space-x-2 border border-gray-300 bg-gray-100 font-normal text-gray-900 hover:bg-gray-200"
+                >
+                  <LinkedIn />
+                  <span>Continue with LinkedIn</span>
+                  {clickedMethod !== "linkedin" && lastUsed === "linkedin" && (
+                    <LastUsed />
+                  )}
+                </Button>
+              </div>
+            )}
+            {hasPasskey && (
+              <div className="relative">
+                <Button
+                  onClick={() => {
+                    setLastUsed("passkey");
+                    setClickedMethod("passkey");
+                    signInWithPasskey({
+                      tenantId: process.env.NEXT_PUBLIC_HANKO_TENANT_ID as string,
+                    }).then(() => {
+                      setClickedMethod(undefined);
+                    });
+                  }}
+                  variant="outline"
+                  loading={clickedMethod === "passkey"}
+                  disabled={clickedMethod && clickedMethod !== "passkey"}
+                  className="flex w-full items-center justify-center space-x-2 border border-gray-300 bg-gray-100 font-normal text-gray-900 hover:bg-gray-200 hover:text-gray-900"
+                >
+                  <Passkey className="h-4 w-4" />
+                  <span>Continue with a passkey</span>
+                  {lastUsed === "passkey" && <LastUsed />}
+                </Button>
+              </div>
+            )}
+            {hasSaml && (
+              <div className="relative">
+                <SSOLogin autoExpand={isSSORequired} />
+              </div>
+            )}
           </div>
           <p className="mt-10 w-full max-w-md px-4 text-xs text-muted-foreground sm:px-12">
             By clicking continue, you acknowledge that you have read and agree

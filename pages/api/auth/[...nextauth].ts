@@ -24,6 +24,17 @@ import { getIpAddress } from "@/lib/utils/ip";
 
 const VERCEL_DEPLOYMENT = !!process.env.VERCEL_URL;
 
+const hasGoogle = !!(
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+);
+const hasLinkedIn = !!(
+  process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET
+);
+const hasHanko = !!(
+  process.env.HANKO_API_KEY && process.env.NEXT_PUBLIC_HANKO_TENANT_ID
+);
+const hasSaml = !!(process.env.NEXTAUTH_URL && process.env.NEXTAUTH_SECRET);
+
 function getMainDomainUrl(): string {
   if (process.env.NODE_ENV === "development") {
     return process.env.NEXTAUTH_URL || "http://localhost:3000";
@@ -41,31 +52,39 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      allowDangerousEmailAccountLinking: true,
-    }),
-    LinkedInProvider({
-      clientId: process.env.LINKEDIN_CLIENT_ID as string,
-      clientSecret: process.env.LINKEDIN_CLIENT_SECRET as string,
-      authorization: {
-        params: { scope: "openid profile email" },
-      },
-      issuer: "https://www.linkedin.com/oauth",
-      jwks_endpoint: "https://www.linkedin.com/oauth/openid/jwks",
-      profile(profile, tokens) {
-        const defaultImage =
-          "https://cdn-icons-png.flaticon.com/512/174/174857.png";
-        return {
-          id: profile.sub,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture ?? defaultImage,
-        };
-      },
-      allowDangerousEmailAccountLinking: true,
-    }),
+    ...(hasGoogle
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID as string,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
+    ...(hasLinkedIn
+      ? [
+          LinkedInProvider({
+            clientId: process.env.LINKEDIN_CLIENT_ID as string,
+            clientSecret: process.env.LINKEDIN_CLIENT_SECRET as string,
+            authorization: {
+              params: { scope: "openid profile email" },
+            },
+            issuer: "https://www.linkedin.com/oauth",
+            jwks_endpoint: "https://www.linkedin.com/oauth/openid/jwks",
+            profile(profile, tokens) {
+              const defaultImage =
+                "https://cdn-icons-png.flaticon.com/512/174/174857.png";
+              return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email,
+                image: profile.picture ?? defaultImage,
+              };
+            },
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     EmailProvider({
       async sendVerificationRequest({ identifier, url }) {
         const hasValidNextAuthUrl = !!process.env.NEXTAUTH_URL;
@@ -97,57 +116,67 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
-    PasskeyProvider({
-      tenant: hanko,
-      async authorize({ userId }) {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) return null;
-        return user;
-      },
-    }),
+    ...(hasHanko
+      ? [
+          PasskeyProvider({
+            tenant: hanko,
+            async authorize({ userId }) {
+              const user = await prisma.user.findUnique({
+                where: { id: userId },
+              });
+              if (!user) return null;
+              return user;
+            },
+          }),
+        ]
+      : []),
     // ─── SP-Initiated SAML SSO (OAuth flow with PKCE + state) ───
     // Used when user clicks "Continue with SSO" on the login page.
     // NextAuth handles PKCE and state validation automatically.
-    {
-      id: "saml",
-      name: "BoxyHQ SAML",
-      type: "oauth",
-      version: "2.0",
-      checks: ["pkce", "state"],
-      authorization: {
-        url: `${process.env.NEXTAUTH_URL}/api/auth/saml/authorize`,
-        params: {
-          scope: "",
-          response_type: "code",
-          provider: "saml",
-        },
-      },
-      token: {
-        url: `${process.env.NEXTAUTH_URL}/api/auth/saml/token`,
-        params: { grant_type: "authorization_code" },
-      },
-      userinfo: `${process.env.NEXTAUTH_URL}/api/auth/saml/userinfo`,
-      profile: async (profile) => {
-        // Return the normalized profile and let PrismaAdapter.createUser
-        // handle user creation so the createUser event fires correctly
-        // (welcome emails, analytics, etc.)
-        const name =
-          `${profile.firstName || ""} ${profile.lastName || ""}`.trim() ||
-          null;
+    ...(hasSaml
+      ? [
+          {
+            id: "saml",
+            name: "BoxyHQ SAML",
+            type: "oauth",
+            version: "2.0",
+            checks: ["pkce", "state"],
+            authorization: {
+              url: `${process.env.NEXTAUTH_URL}/api/auth/saml/authorize`,
+              params: {
+                scope: "",
+                response_type: "code",
+                provider: "saml",
+              },
+            },
+            token: {
+              url: `${process.env.NEXTAUTH_URL}/api/auth/saml/token`,
+              params: { grant_type: "authorization_code" },
+            },
+            userinfo: `${process.env.NEXTAUTH_URL}/api/auth/saml/userinfo`,
+            profile: async (profile: any) => {
+              // Return the normalized profile and let PrismaAdapter.createUser
+              // handle user creation so the createUser event fires correctly
+              // (welcome emails, analytics, etc.)
+              const name =
+                `${profile.firstName || ""} ${profile.lastName || ""}`.trim() ||
+                null;
 
-        return {
-          id: profile.id || profile.email,
-          name,
-          email: profile.email,
-          image: null,
-        };
-      },
-      options: {
-        clientId: "dummy",
-        clientSecret: process.env.NEXTAUTH_SECRET as string,
-      },
-      allowDangerousEmailAccountLinking: true,
-    },
+              return {
+                id: profile.id || profile.email,
+                name,
+                email: profile.email,
+                image: null,
+              };
+            },
+            options: {
+              clientId: "dummy",
+              clientSecret: process.env.NEXTAUTH_SECRET as string,
+            },
+            allowDangerousEmailAccountLinking: true,
+          } as any,
+        ]
+      : []),
     // ─── IdP-Initiated SAML SSO (Credentials provider) ───
     // Used when user clicks the app tile in their IdP dashboard.
     // Jackson redirects with a code to /auth/saml, which then calls signIn("saml-idp", { code }).
@@ -309,10 +338,7 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
 
         // ─── SSO Enforcement ───
         // If user is NOT signing in via SAML, check if their domain requires SSO
-        if (
-          account?.provider !== "saml" &&
-          account?.provider !== "saml-idp"
-        ) {
+        if (account?.provider !== "saml" && account?.provider !== "saml-idp") {
           const ssoEnforced = await isSamlEnforcedForEmailDomain(user.email);
           if (ssoEnforced) {
             throw new Error("require-saml-sso");
@@ -320,10 +346,7 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
         }
 
         // ─── SAML user → email domain validation ───
-        if (
-          account?.provider === "saml" ||
-          account?.provider === "saml-idp"
-        ) {
+        if (account?.provider === "saml" || account?.provider === "saml-idp") {
           // Get the SAML profile — comes from different places depending on provider
           let samlProfile: any;
           if (account.provider === "saml-idp") {
@@ -345,13 +368,8 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
             });
 
             if (team?.ssoEmailDomain) {
-              const userEmailDomain = user.email
-                .split("@")[1]
-                ?.toLowerCase();
-              if (
-                userEmailDomain !==
-                team.ssoEmailDomain.toLowerCase()
-              ) {
+              const userEmailDomain = user.email.split("@")[1]?.toLowerCase();
+              if (userEmailDomain !== team.ssoEmailDomain.toLowerCase()) {
                 console.warn(
                   `[SAML] Rejected: user ${user.email} domain does not match team ssoEmailDomain ${team.ssoEmailDomain}`,
                 );

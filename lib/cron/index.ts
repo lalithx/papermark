@@ -9,23 +9,27 @@ export const limiter = new Bottleneck({
 });
 
 /**
- * Creates a resilient QStash client that doesn't crash on initialization when env vars are missing.
+ * Creates a resilient QStash client.
  */
 function createQStashClient(token?: string): Client {
-  if (token && token !== "placeholder") {
+  if (token && token !== "placeholder" && token.trim()) {
     return new Client({ token });
   }
 
   // Return a mock if not configured
-  return new Proxy({} as Client, {
-    get(_, prop) {
-      return () => {
-        // We log a warning instead of a hard crash in some contexts
-        console.warn("QStash is not configured. Some features may not work.");
-        return Promise.resolve(null);
-      };
+  const mockClient: any = {
+    token: "placeholder",
+    publishJSON: async () => {
+      console.warn("QStash is not configured. QStash operations will be ignored.");
+      return { messageId: "mock-message-id" };
     },
-  });
+    publish: async () => {
+      console.warn("QStash is not configured. QStash operations will be ignored.");
+      return { messageId: "mock-message-id" };
+    },
+  };
+
+  return mockClient;
 }
 
 // we're using Upstash's Receiver to verify the request signature
