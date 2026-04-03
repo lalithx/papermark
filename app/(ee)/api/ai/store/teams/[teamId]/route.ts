@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+
 
 import { getVectorStoreInfo } from "@/ee/features/ai/lib/vector-stores/get-vector-store-info";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";

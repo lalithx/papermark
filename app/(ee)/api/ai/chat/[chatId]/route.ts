@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+
 
 import { validateChatAccess } from "@/ee/features/ai/lib/permissions/validate-chat-access";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";

@@ -13,6 +13,7 @@ import "react-notion-x/src/styles.css";
 
 import { useSafePageViewTracker } from "@/lib/tracking/safe-page-view-tracker";
 import { getTrackingOptions } from "@/lib/tracking/tracking-config";
+import { normalizeRecordMap } from "@/lib/notion/utils";
 import { NotionTheme } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { createAdaptiveSurfacePalette } from "@/lib/utils/create-adaptive-surface-palette";
@@ -281,7 +282,7 @@ export const NotionPage = ({
           const currentRecordMap = recordMapCache.current[pageId];
           setRecordMapState(currentRecordMap);
           const firstBlockId = Object.keys(currentRecordMap.block)[0];
-          const firstBlock = currentRecordMap.block[firstBlockId];
+          const firstBlock = currentRecordMap.block[firstBlockId] as any;
           setSubTitle(
             firstBlock?.value?.properties?.title?.[0]?.[0] || "Untitled",
           );
@@ -299,10 +300,11 @@ export const NotionPage = ({
             },
           });
           const newRecordMap = await response.json();
+          normalizeRecordMap(newRecordMap);
           recordMapCache.current[pageId] = newRecordMap;
           setRecordMapState(newRecordMap);
           const firstBlockId = Object.keys(newRecordMap.block)[0];
-          const firstBlock = newRecordMap.block[firstBlockId];
+          const firstBlock = newRecordMap.block[firstBlockId] as any;
           setSubTitle(
             firstBlock?.value?.properties?.title?.[0]?.[0] || "Untitled",
           );
@@ -315,7 +317,7 @@ export const NotionPage = ({
       } else {
         setRecordMapState(recordMap);
         const firstBlockId = Object.keys(recordMap.block)[0];
-        const firstBlock = recordMap.block[firstBlockId];
+        const firstBlock = recordMap.block[firstBlockId] as any;
         setTitle(firstBlock?.value?.properties?.title?.[0]?.[0] || "Untitled");
         window.scrollTo({ top: 0, behavior: "smooth" });
       }

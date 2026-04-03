@@ -164,8 +164,9 @@ export const addSignedUrls: NotionAPI["addSignedUrls"] = async ({
     contentBlockIds = getPageContentBlockIds(recordMap);
   }
 
+  normalizeRecordMap(recordMap);
   const allFileInstances = contentBlockIds.flatMap((blockId) => {
-    const block = recordMap.block[blockId]?.value;
+    const block = recordMap.block[blockId]?.value as any;
 
     if (
       block &&

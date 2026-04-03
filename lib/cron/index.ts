@@ -15,5 +15,5 @@ export const receiver = new Receiver({
 });
 
 export const qstash = new Client({
-  token: process.env.QSTASH_TOKEN || "",
+  token: process.env.QSTASH_TOKEN || "placeholder",
 });

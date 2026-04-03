@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+
 
 import {
   SUPPORTED_AI_CONTENT_TYPES,
